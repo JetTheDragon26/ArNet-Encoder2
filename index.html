@@ -108,7 +108,7 @@
             </label>
         </div>
 
-        <div class="panel" style="flex-grow: m; flex-grow: 1; margin-bottom: 0; display: flex; flex-direction: column; justify-content: center;">
+        <div class="panel" style="flex-grow: 1; margin-bottom: 0; display: flex; flex-direction: column; justify-content: center;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                 <span style="font-size: 10px; color: #AAAAAA; font-weight: bold;">CARRIER &amp; BANDWIDTH CONFIG</span>
                 <select id="comboBandwidth" style="width: 110px; height: 18px; font-size: 9px; font-weight: bold;">
@@ -153,7 +153,6 @@
 </div>
 
 <script>
-    // --- Global Application State ---
     let audioCtx = null;
     let isRecording = false;
     let mediaRecorder = null;
@@ -162,8 +161,8 @@
     let currentAmplitude = 0.02;
     let isScopeMode = true;
     let activeSourceNode = null;
+    let playbackStartTime = 0;
 
-    // DOM Elements
     const comboMode = document.getElementById("comboMode");
     const comboBand = document.getElementById("comboBand");
     const txtFrequency = document.getElementById("txtFrequency");
@@ -183,13 +182,13 @@
     const boxTxState = document.getElementById("boxTxState");
     const chkUnencoded = document.getElementById("chkUnencoded");
     const txtCallsign = document.getElementById("txtCallsign");
+    const comboBandwidth = document.getElementById("comboBandwidth");
 
     const meterCanvas = document.getElementById("meterCanvas");
     const meterCtx = meterCanvas.getContext("2d");
     const displayCanvas = document.getElementById("displayCanvas");
     const displayCtx = displayCanvas.getContext("2d");
 
-    // Initialize Audio Context on User Interaction
     function getAudioContext() {
         if (!audioCtx) {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -200,7 +199,6 @@
         return audioCtx;
     }
 
-    // --- Band Configurations ---
     function updateBandList() {
         const mode = comboMode.value;
         comboBand.innerHTML = "";
@@ -250,7 +248,6 @@
         txtCarrierVal.textContent = `${percent}%`;
     });
 
-    // --- Morse Code Translation Engine ---
     const morseMap = {
         'A': '.-', 'B': '-...', 'C': '-.-.', 'D': '-..', 'E': '.', 'F': '..-.',
         'G': '--.', 'H': '....', 'I': '..', 'J': '.---', 'K': '-.-', 'L': '.-..',
@@ -265,7 +262,6 @@
         return text.toUpperCase().split('').map(c => morseMap[c] || '').join(' ');
     }
 
-    // --- Audio Synthesis & FM Modulation Engine (Web Audio Buffers) ---
     function generateToneAudio(morseString, unencoded, sampleRate, carrierLevel, wideband) {
         let dotDuration = 0.09;
         let sequence = [];
@@ -321,7 +317,7 @@
         for (let i = 0; i < inputData.length; i++) {
             let normVoice = inputData[i];
             phaseScrambler += (2 * Math.PI * 1850) / sampleRate;
-            let scrambled = -normVoice * Math.Cos ? Math.Cos(phaseScrambler) : Math.cos(phaseScrambler);
+            let scrambled = -normVoice * Math.cos(phaseScrambler) * 1.8;
             let voiceAbs = Math.abs(scrambled);
 
             let modFreq = (120 + (350 * voiceAbs)) * devMult;
@@ -354,15 +350,16 @@
         activeSourceNode.start();
         
         processedAudioBuffer = buffer;
+        playbackStartTime = audioCtx.currentTime;
         btnSave.disabled = false;
         
         activeSourceNode.onended = () => {
             txtTxState.textContent = "RX";
             boxTxState.style.background = "#330000";
+            activeSourceNode = null;
         };
     }
 
-    // --- UI Interactions & Event Handlers ---
     btnToggleDisplay.addEventListener("click", () => {
         isScopeMode = !isScopeMode;
         if (isScopeMode) {
@@ -394,7 +391,6 @@
         txtStatus.style.color = "#00FFCC";
     });
 
-    // PTT Live Microphone Recording & Modulation Pipeline
     btnPtt.addEventListener("click", async () => {
         let ctx = getAudioContext();
         if (!isRecording) {
@@ -469,7 +465,6 @@
 
     btnSave.addEventListener("click", () => {
         if (!processedAudioBuffer) return;
-        // Simple WAV conversion for export
         let wavBytes = bufferToWav(processedAudioBuffer);
         let blob = new Blob([wavBytes], { type: 'audio/wav' });
         let url = URL.createObjectURL(blob);
@@ -484,11 +479,10 @@
         txtStatus.style.color = "#00FFCC";
     });
 
-    // Helper to export AudioBuffer to WAV format bytes
     function bufferToWav(buffer) {
         let numOfChan = buffer.numberOfChannels,
             sampleRate = buffer.sampleRate,
-            format = 1, // PCM
+            format = 1,
             bitDepth = 16;
 
         let result = buffer.getChannelData(0);
@@ -523,18 +517,39 @@
         return abuffer;
     }
 
-    // --- Real-time Meter & Screen Display Animation Loop ---
     const wfCanvas = document.createElement('canvas');
     wfCanvas.width = 160;
     wfCanvas.height = 80;
     const wfCtx = wfCanvas.getContext('2d');
     let wfImageData = wfCtx.createImageData(160, 80);
 
-    function animationTick() {
-        // Meter Needle Dynamics
-        let targetAmp = isRecording ? 0.85 : (activeSourceNode ? 0.6 : 0.02);
-        currentAmplitude += (targetAmp - currentAmplitude) * 0.2;
+    function getCurrentAmplitude() {
+        if (isRecording) return 0.75 + (Math.random() * 0.1);
+        if (activeSourceNode && processedAudioBuffer && audioCtx) {
+            let elapsed = audioCtx.currentTime - playbackStartTime;
+            let sampleRate = processedAudioBuffer.sampleRate;
+            let idx = Math.floor(elapsed * sampleRate);
+            let channelData = processedAudioBuffer.getChannelData(0);
+            let sumSq = 0;
+            let count = 0;
+            for (let i = idx; i < idx + 200 && i < channelData.length; i += 2) {
+                let val = channelData[i];
+                sumSq += val * val;
+                count++;
+            }
+            if (count > 0) {
+                let rms = Math.sqrt(sumSq / count);
+                return Math.min(1.0, Math.max(0.05, rms * 2.5));
+            }
+        }
+        return 0.02;
+    }
 
+    function animationTick() {
+        let targetAmp = getCurrentAmplitude();
+        currentAmplitude += (targetAmp - currentAmplitude) * 0.25;
+
+        // Meter Needle Drawing
         meterCtx.clearRect(0, 0, 200, 90);
         meterCtx.strokeStyle = "#666";
         meterCtx.lineWidth = 2;
@@ -554,7 +569,7 @@
         meterCtx.lineTo(nx, ny);
         meterCtx.stroke();
 
-        // Scope / Waterfall Rendering
+        // Scope Display Drawing
         displayCtx.fillStyle = "#000000";
         displayCtx.fillRect(0, 0, 640, 140);
 
@@ -574,8 +589,9 @@
             displayCtx.moveTo(0, 140);
             for (let x = 0; x < 640; x += 8) {
                 let noise = Math.random() * 2;
-                let peak = (currentAmplitude * 110) * Math.sin((x * 0.15) + (Date.now() * 0.005));
-                let y = 140 - (noise + Math.abs(peak));
+                let carrierSpike = (activeSourceNode || isRecording) && Math.abs(x - 160) < 10 ? 85 : 0;
+                let audioPeak = (currentAmplitude * 100) * Math.sin((x * 0.15) + (Date.now() * 0.005));
+                let y = 140 - (noise + carrierSpike + Math.abs(audioPeak));
                 displayCtx.lineTo(x, y);
             }
             displayCtx.lineTo(640, 140);
@@ -583,12 +599,10 @@
             displayCtx.stroke();
             displayCtx.fill();
         } else {
-            // Shift waterfall down by 1 row
             let data = wfImageData.data;
             for (let i = data.length - 1; i >= 640; i--) {
                 data[i] = data[i - 640];
             }
-            // Generate top line pixels
             for (let x = 0; x < 160; x++) {
                 let intensity = Math.min(1.0, Math.random() * 0.04 + (Math.abs(x - 40) < 3 ? 0.85 : 0) + (Math.abs(x - 80) < 25 ? currentAmplitude : 0));
                 let idx = x * 4;

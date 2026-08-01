@@ -2,557 +2,608 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ArNet Transceiver & Encrypted WAV FM Modulator</title>
+    <title>ArNet Secure Web Transceiver & FM Modulator</title>
     <style>
         body {
             background-color: #000000;
             color: #ffffff;
-            font-family: 'Consolas', monospace;
+            font-family: Consolas, monospace;
             margin: 0;
             padding: 10px;
             display: flex;
             justify-content: center;
-            align-items: center;
-            height: 100vh;
-            overflow: hidden;
         }
-
-        .window {
+        .container {
             width: 680px;
-            height: 620px;
-            background-color: #000000;
-            border: 1px solid #222222;
-            display: grid;
-            grid-template-rows: 120px 135px 190px 1fr;
-            gap: 8px;
+            background: #000000;
+            border: 1px solid #222;
             padding: 10px;
             box-sizing: border-box;
         }
-
-        /* Top Panel: S-Meter & Frequency */
-        .top-panel {
-            background-color: #0A0A0C;
-            border: 1px solid #222222;
+        .panel {
+            background: #0A0A0C;
+            border: 1px solid #222;
             border-radius: 4px;
             padding: 8px;
-            display: grid;
-            grid-template-columns: 220px 1fr;
-            gap: 10px;
+            margin-bottom: 8px;
         }
-
-        .meter-box {
-            background-color: #050508;
-            border: 1px solid #333333;
+        .row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        .column {
+            display: flex;
+            flex-direction: column;
+        }
+        button {
+            font-family: Consolas, monospace;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
             border-radius: 3px;
-            position: relative;
-            overflow: hidden;
         }
-
-        .control-panel {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
+        select, input[type="text"], input[type="range"] {
+            font-family: Consolas, monospace;
+            background: #111115;
+            color: #00FFCC;
+            border: 1px solid #333;
         }
-
-        .header-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 5px;
-        }
-
-        select, button, input {
-            font-family: 'Consolas', monospace;
-        }
-
-        .combo-mode {
-            width: 70px;
-            height: 20px;
-            background: #222222;
-            color: #FFCC00;
-            font-weight: bold;
-            font-size: 10px;
-        }
-
-        .combo-band {
-            width: 105px;
-            height: 20px;
-            background: #222222;
-            color: #00FFFF;
-            font-weight: bold;
-            font-size: 10px;
-        }
-
-        .tx-badge {
-            background: #330000;
-            padding: 2px 6px;
-            border-radius: 2px;
-            color: #FF3333;
-            font-size: 11px;
-            font-weight: bold;
-        }
-
-        .freq-display-row {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-top: 2px;
-        }
-
-        .freq-input {
-            width: 160px;
-            height: 48px;
-            background: #0A0A0C;
-            color: #00FFFF;
-            border: 1px solid #005555;
-            font-size: 36px;
-            font-weight: bold;
-            text-align: right;
-            padding-right: 5px;
-        }
-
-        /* Second Panel: PTT, Ident, Carrier */
-        .second-panel {
-            display: grid;
-            grid-template-columns: 200px 1fr;
-            gap: 10px;
-        }
-
-        .action-column {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-
-        .btn-ptt { height: 30px; background: #880000; color: white; font-weight: bold; font-size: 10px; border: none; cursor: pointer; }
-        .btn-video { height: 24px; background: #005577; color: #00FFFF; font-weight: bold; font-size: 9px; border: none; cursor: pointer; }
-        .ident-row { display: grid; grid-template-columns: 1fr 65px; gap: 4px; }
-        .txt-callsign { background: #111115; color: #00FFCC; border: 1px solid #333333; font-weight: bold; font-size: 10px; text-align: center; height: 24px; }
-        .btn-ident { background: #004466; color: white; font-weight: bold; font-size: 9px; border: none; cursor: pointer; }
-        .chk-unencoded { color: #AAAAAA; font-size: 8px; margin-top: 2px; }
-
-        .carrier-box {
-            background: #0A0A0C;
-            border: 1px solid #222222;
-            border-radius: 4px;
-            padding: 10px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
-
-        /* Third Panel: Scope & Waterfall */
-        .scope-panel {
-            background: #050508;
-            border: 1px solid #222222;
-            border-radius: 4px;
-            padding: 6px;
-            display: grid;
-            grid-template-rows: 22px 1fr;
-        }
-
-        .scope-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 10px;
-        }
-
-        .scope-screen {
+        .screen {
             background: #000000;
             border: 1px solid #111115;
             position: relative;
+            height: 140px;
             overflow: hidden;
         }
-
         canvas {
             width: 100%;
             height: 100%;
             display: block;
         }
-
-        /* Bottom Panel: Status & IO Buttons */
-        .bottom-panel {
-            display: grid;
-            grid-template-columns: 1fr 110px 110px;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .status-box {
-            background: #0A0A0C;
-            border: 1px solid #222222;
-            border-radius: 4px;
-            padding: 8px;
-            font-size: 11px;
-            color: #888888;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .btn-io {
-            height: 28px;
-            font-weight: bold;
-            font-size: 10px;
-            border: none;
-            cursor: pointer;
-        }
-        .btn-load { background: #003366; color: white; }
-        .btn-save { background: #114422; color: white; }
-        .btn-save:disabled { background: #222; color: #555; cursor: not-allowed; }
     </style>
 </head>
 <body>
 
-<div class="window">
-    <div class="top-panel">
-        <div class="meter-box">
-            <canvas id="sMeterCanvas" width="200" height="90"></canvas>
+<div class="container">
+    <div class="panel" style="display: flex; align-items: center; justify-content: space-between; height: 100px; padding: 5px;">
+        <div style="background: #050508; border: 1px solid #333; border-radius: 3px; width: 200px; height: 90px; position: relative;">
+            <canvas id="meterCanvas" width="200" height="90" style="position: absolute; left: 0; top: 0;"></canvas>
         </div>
-        <div class="control-panel">
-            <div class="header-row">
-                <div style="display: flex; gap: 4px;">
-                    <select id="comboMode" class="combo-mode">
-                        <option value="AARM" selected>AARM</option>
-                        <option value="ABM">ABM</option>
-                        <option value="ABMTV">ABMTV</option>
-                    </select>
-                    <select id="comboBand" class="combo-band">
-                        <option value="SOLIDBAND">SOLIDBAND</option>
-                    </select>
+
+        <div style="flex-grow: 1; margin-left: 15px; display: flex; flex-direction: column; justify-content: center;">
+            <div style="display: flex; align-items: center; gap: 5px; margin-bottom: 4px;">
+                <select id="comboMode" style="width: 70px; height: 22px; background: #222; color: #FFCC00; font-size: 10px; font-weight: bold;">
+                    <option value="AARM">AARM</option>
+                    <option value="ABM">ABM</option>
+                    <option value="ABMTV">ABMTV</option>
+                </select>
+
+                <select id="comboBand" style="width: 110px; height: 22px; background: #222; color: #00FFFF; font-size: 10px; font-weight: bold;"></select>
+
+                <div id="boxTxState" style="background: #330000; padding: 2px 6px; border-radius: 2px; margin-left: auto;">
+                    <span id="txtTxState" style="color: #FF3333; font-size: 11px; font-weight: bold;">RX</span>
                 </div>
-                <div id="boxTxState" class="tx-badge"><span id="txtTxState">RX</span></div>
-                <span style="color: #888888; font-size: 11px;">SECURE LINK</span>
             </div>
-            <div class="freq-display-row">
-                <input id="txtFrequency" type="text" class="freq-input" value="4550">
-                <span style="color: #00FFFF; font-size: 20px; font-weight: bold; margin-left: 4px;">Vt</span>
+
+            <div style="display: flex; align-items: baseline; justify-content: center;">
+                <input type="text" id="txtFrequency" value="4550" style="color: #00FFFF; font-size: 32px; font-weight: bold; text-align: right; width: 140px; height: 42px; background: #0A0A0C; border-color: #005555;">
+                <span style="color: #00FFFF; font-size: 18px; font-weight: bold; margin-left: 4px;">Vt</span>
             </div>
         </div>
     </div>
 
-    <div class="second-panel">
-        <div class="action-column">
-            <button id="btnPtt" class="btn-ptt">🎙️ PTT MIC</button>
-            <button id="btnLoadVideo" class="btn-video">📷 LOAD VIDEO / IMAGE</button>
-            <div class="ident-row">
-                <input id="txtCallsign" type="text" class="txt-callsign" maxlength="7" value="W1AW/1">
-                <button id="btnIdent" class="btn-ident">📡 IDENT</button>
+    <div class="row" style="margin-bottom: 8px;">
+        <div class="column" style="width: 200px; gap: 4px;">
+            <button id="btnPtt" style="height: 32px; background: #880000; color: white; font-size: 10px;">🎙️ PTT MIC</button>
+            <button id="btnLoadVideo" style="height: 24px; background: #005577; color: #00FFFF; font-size: 9px;">📷 LOAD VIDEO / IMAGE</button>
+            
+            <div style="display: flex; gap: 4px;">
+                <input type="text" id="txtCallsign" value="W1AW/1" maxlength="7" style="width: 115px; height: 24px; text-align: center; font-size: 10px; font-weight: bold;">
+                <button id="btnIdent" style="flex-grow: 1; background: #004466; color: white; font-size: 9px;">📡 IDENT</button>
             </div>
-            <label class="chk-unencoded"><input type="checkbox" id="chkUnencoded"> Unencoded Audio (Plain Morse)</label>
+            
+            <label style="font-size: 8px; color: #AAAAAA; display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+                <input type="checkbox" id="chkUnencoded"> Unencoded Audio (Plain Morse)
+            </label>
         </div>
-        <div class="carrier-box">
-            <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: bold; color: #AAAAAA;">
-                <span>CARRIER & BANDWIDTH CONFIG</span>
-                <div>
-                    <span style="color: #888888; font-size: 9px;">BANDWIDTH: </span>
-                    <select id="comboBandwidth" style="background: #111; color: #00FFCC; font-size: 9px; font-weight: bold;">
-                        <option value="wide" selected>Wide (2.8 kHz)</option>
-                        <option value="narrow">Narrow (500 Hz)</option>
-                    </select>
-                </div>
+
+        <div class="panel" style="flex-grow: m; flex-grow: 1; margin-bottom: 0; display: flex; flex-direction: column; justify-content: center;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <span style="font-size: 10px; color: #AAAAAA; font-weight: bold;">CARRIER &amp; BANDWIDTH CONFIG</span>
+                <select id="comboBandwidth" style="width: 110px; height: 18px; font-size: 9px; font-weight: bold;">
+                    <option value="wide">Wide (2.8 kHz)</option>
+                    <option value="narrow">Narrow (500 Hz)</option>
+                </select>
             </div>
-            <div style="margin-top: 10px;">
-                <div style="display: flex; justify-content: space-between; font-size: 11px;">
-                    <span style="color: #CCCCCC;">Baseline Carrier Power:</span>
-                    <span id="txtCarrierVal" style="color: #00FFFF; font-weight: bold;">20%</span>
-                </div>
-                <input id="sliderCarrier" type="range" min="0.0" max="0.5" step="0.05" value="0.1" style="width: 100%; margin-top: 4px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
+                <span>Baseline Carrier Power:</span>
+                <span id="txtCarrierVal" style="color: #00FFFF; font-weight: bold;">10%</span>
             </div>
+            <input type="range" id="sliderCarrier" min="0.0" max="0.5" step="0.05" value="0.1" style="width: 100%; margin-top: 4px;">
         </div>
     </div>
 
-    <div class="scope-panel">
-        <div class="scope-header">
+    <div class="panel" style="padding: 6px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; height: 22px;">
             <div style="display: flex; align-items: center; gap: 10px;">
-                <span id="lblScopeMode" style="color: #00FFFF; font-weight: bold;">SPECTRUM SCOPE</span>
-                <button id="btnToggleDisplay" style="background: #003344; color: #00FFCC; font-size: 9px; font-weight: bold; border: none; cursor: pointer; padding: 2px 6px;">🔄 SWITCH TO WATERFALL</button>
+                <span id="lblScopeMode" style="color: #00FFFF; font-size: 10px; font-weight: bold;">SPECTRUM SCOPE</span>
+                <button id="btnToggleDisplay" style="background: #003344; color: #00FFCC; font-size: 9px; padding: 2px 6px;">🔄 SWITCH TO WATERFALL</button>
             </div>
-            <div style="display: flex; gap: 8px;">
+            <div style="display: flex; gap: 8px; font-size: 9px;">
                 <span style="color: #00FFFF;">■ Carrier</span>
                 <span style="color: #FFFF00;">■ Audio</span>
                 <span id="txtVideoLegend" style="color: #FF00FF; display: none;">■ Video Subcarrier</span>
             </div>
         </div>
-        <div class="scope-screen">
-            <canvas id="mainCanvas" width="640" height="140"></canvas>
+        <div class="screen">
+            <canvas id="displayCanvas" width="640" height="140"></canvas>
         </div>
     </div>
 
-    <div class="bottom-panel">
-        <div id="txtStatus" class="status-box">STATUS: STANDBY. Secure encryption pipeline ready...</div>
-        <button id="btnLoad" class="btn-io btn-load">📁 LOAD WAV</button>
-        <button id="btnSave" class="btn-io btn-save" disabled>💾 SAVE WAV</button>
+    <div style="display: flex; gap: 6px;">
+        <div class="panel" style="flex-grow: 1; margin-bottom: 0; display: flex; align-items: center; padding: 0 10px; height: 32px;">
+            <span id="txtStatus" style="color: #888888; font-size: 11px;">STATUS: STANDBY. Secure Web Audio pipeline ready...</span>
+        </div>
+        <button id="btnLoad" style="width: 110px; height: 32px; background: #003366; color: white; font-size: 10px;">📁 LOAD WAV</button>
+        <button id="btnSave" style="width: 110px; height: 32px; background: #114422; color: white; font-size: 10px;" disabled>💾 SAVE WAV</button>
+        <input type="file" id="fileInput" accept=".wav" style="display: none;">
+        <input type="file" id="videoInput" accept="image/*,video/*" style="display: none;">
     </div>
 </div>
 
 <script>
-// =====================================================================
-// ArNet Transceiver GUI (Encrypted/Scrambled Audio FM Modulator Fix)
-// Converted to Node.js / Electron / Browser-compatible Vanilla JavaScript
-// =====================================================================
+    // --- Global Application State ---
+    let audioCtx = null;
+    let isRecording = false;
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let processedAudioBuffer = null;
+    let currentAmplitude = 0.02;
+    let isScopeMode = true;
+    let activeSourceNode = null;
 
-class AudioDSPv15 {
-    constructor() {
-        // Pseudo-random number generator equivalent for JS
+    // DOM Elements
+    const comboMode = document.getElementById("comboMode");
+    const comboBand = document.getElementById("comboBand");
+    const txtFrequency = document.getElementById("txtFrequency");
+    const txtStatus = document.getElementById("txtStatus");
+    const btnPtt = document.getElementById("btnPtt");
+    const btnIdent = document.getElementById("btnIdent");
+    const btnLoad = document.getElementById("btnLoad");
+    const btnSave = document.getElementById("btnSave");
+    const fileInput = document.getElementById("fileInput");
+    const videoInput = document.getElementById("videoInput");
+    const btnToggleDisplay = document.getElementById("btnToggleDisplay");
+    const lblScopeMode = document.getElementById("lblScopeMode");
+    const txtVideoLegend = document.getElementById("txtVideoLegend");
+    const sliderCarrier = document.getElementById("sliderCarrier");
+    const txtCarrierVal = document.getElementById("txtCarrierVal");
+    const txtTxState = document.getElementById("txtTxState");
+    const boxTxState = document.getElementById("boxTxState");
+    const chkUnencoded = document.getElementById("chkUnencoded");
+    const txtCallsign = document.getElementById("txtCallsign");
+
+    const meterCanvas = document.getElementById("meterCanvas");
+    const meterCtx = meterCanvas.getContext("2d");
+    const displayCanvas = document.getElementById("displayCanvas");
+    const displayCtx = displayCanvas.getContext("2d");
+
+    // Initialize Audio Context on User Interaction
+    function getAudioContext() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+        return audioCtx;
     }
 
-    static getPcmRms(wavBytes, elapsedSec, windowSize) {
-        if (!wavBytes || wavBytes.length <= 44) return 0.02;
+    // --- Band Configurations ---
+    function updateBandList() {
+        const mode = comboMode.value;
+        comboBand.innerHTML = "";
+        let bands = [];
 
-        const dataView = new DataView(wavBytes.buffer);
-        const sampleRate = dataView.getInt32(24, true);
-        const effectiveSampleRate = sampleRate <= 0 ? 22050 : sampleRate;
-
-        const currentSampleIdx = Math.floor(elapsedSec * effectiveSampleRate);
-        const totalSamples = (wavBytes.length - 44) / 2;
-
-        if (currentSampleIdx >= totalSamples) return 0.02;
-
-        let sumSq = 0.0;
-        let count = 0;
-
-        for (let i = 0; i < windowSize; i += 2) {
-            const idx = currentSampleIdx + i;
-            const byteOffset = 44 + (idx * 2);
-
-            if (byteOffset + 1 < wavBytes.length) {
-                const sample = dataView.getInt16(byteOffset, true);
-                const norm = sample / 32768.0;
-                sumSq += (norm * norm);
-                count++;
-            }
+        if (mode === "AARM") {
+            bands = ["ALFRS", "SOLIDBAND", "AHFRS 2", "ATF 1"];
+            txtVideoLegend.style.display = "none";
+        } else if (mode === "ABM") {
+            bands = ["AHFRS 1 (Low)"];
+            txtVideoLegend.style.display = "none";
+        } else if (mode === "ABMTV") {
+            bands = ["AHFRS 1 (High)"];
+            txtVideoLegend.style.display = "inline";
         }
 
-        if (count > 0) {
-            const rms = Math.sqrt(sumSq / count);
-            return rms > 0.02 ? Math.min(1.0, rms * 3.8) : 0.02;
-        }
-
-        return 0.02;
+        bands.forEach(b => {
+            let opt = document.createElement("option");
+            opt.value = b;
+            opt.textContent = b;
+            comboBand.appendChild(opt);
+        });
+        updateFrequencyLimits();
     }
 
-    static wrapPcmAsWav(pcmSamples, sampleRate) {
-        const pcmLength = pcmSamples.length * 2;
-        const processedPcm = new Uint8Array(pcmLength);
-        const view = new DataView(processedPcm.buffer);
+    function updateFrequencyLimits() {
+        const band = comboBand.value;
+        let freq = 4550;
+        if (band === "ALFRS") freq = 3050;
+        else if (band === "SOLIDBAND") freq = 4550;
+        else if (band === "AHFRS 1 (Low)") freq = 6500;
+        else if (band === "AHFRS 1 (High)") freq = 7500;
+        else if (band === "AHFRS 2") freq = 8000;
+        else if (band === "ATF 1") freq = 8340;
 
-        for (let i = 0; i < pcmSamples.length; i++) {
-            view.setInt16(i * 2, pcmSamples[i], true);
-        }
-
-        const headerLength = 44;
-        const wavBuffer = new ArrayBuffer(headerLength + pcmLength);
-        const wavView = new DataView(wavBuffer);
-
-        // RIFF chunk
-        wavView.setUint8(0, 82); // R
-        wavView.setUint8(1, 73); // I
-        wavView.setUint8(2, 70); // F
-        wavView.setUint8(3, 70); // F
-        wavView.setUint32(4, pcmLength + 36, true);
-        wavView.setUint8(8, 87);  // W
-        wavView.setUint8(9, 65);  // A
-        wavView.setUint8(10, 86); // V
-        wavView.setUint8(11, 69); // E
-
-        // fmt sub-chunk
-        wavView.setUint8(12, 102); // f
-        wavView.setUint8(13, 109); // m
-        wavView.setUint8(14, 116); // t
-        wavView.setUint8(15, 32);  // ' '
-        wavView.setUint32(16, 16, true); // SubChunk1ID (16 for PCM)
-        wavView.setUint16(20, 1, true);  // AudioFormat (1 for PCM)
-        wavView.setUint16(22, 1, true);  // NumChannels (1 = Mono)
-        wavView.setUint32(24, sampleRate, true); // SampleRate
-        wavView.setUint32(28, sampleRate * 2, true); // ByteRate
-        wavView.setUint16(32, 2, true);  // BlockAlign
-        wavView.setUint16(34, 16, true); // BitsPerSample
-
-        // data sub-chunk
-        wavView.setUint8(36, 100); // d
-        wavView.setUint8(37, 97);  // a
-        wavView.setUint8(38, 116); // t
-        wavView.setUint8(39, 97);  // a
-        wavView.setUint32(40, pcmLength, true);
-
-        // Append PCM samples
-        const uint8View = new Uint8Array(wavBuffer);
-        uint8View.set(processedPcm, 44);
-
-        return uint8View;
+        txtFrequency.value = freq;
+        txtStatus.textContent = `STATUS: Band [${band}] Active`;
+        txtStatus.style.color = "#00FFFF";
     }
 
-    static fastRenderWaterfall(pixelBuffer, width, height, amp, isTransmitting, wfCarrierX, wfAudioX, wfVideoX, isAbmtv) {
-        const stride = width * 4;
-        // Shift rows down
-        pixelBuffer.copyWithin(stride, 0, (height - 1) * stride);
+    comboMode.addEventListener("change", updateBandList);
+    comboBand.addEventListener("change", updateFrequencyLimits);
+    updateBandList();
 
-        for (let x = 0; x < width; x++) {
-            const noise = Math.random() * 0.04;
-            
-            let cBar = 0.0;
-            if (isTransmitting) {
-                const cDist = Math.abs(x - wfCarrierX);
-                if (cDist < 2.5) cBar = 0.85;
-            }
+    sliderCarrier.addEventListener("input", () => {
+        let percent = Math.round((sliderCarrier.value / 0.5) * 100);
+        txtCarrierVal.textContent = `${percent}%`;
+    });
 
-            const aDist = Math.abs(x - wfAudioX);
-            let aSig = 0.0;
-            if (aDist < 25.0) {
-                aSig = (amp * 1.2) * Math.cos((aDist / 25.0) * (Math.PI / 2.0));
-            }
+    // --- Morse Code Translation Engine ---
+    const morseMap = {
+        'A': '.-', 'B': '-...', 'C': '-.-.', 'D': '-..', 'E': '.', 'F': '..-.',
+        'G': '--.', 'H': '....', 'I': '..', 'J': '.---', 'K': '-.-', 'L': '.-..',
+        'M': '--', 'N': '-.', 'O': '---', 'P': '.--.', 'Q': '--.-', 'R': '.-.',
+        'S': '...', 'T': '-', 'U': '..-', 'V': '...-', 'W': '.--', 'X': '-..-',
+        'Y': '-.--', 'Z': '--..', '0': '-----', '1': '.----', '2': '..---',
+        '3': '...--', '4': '....-', '5': '.....', '6': '-....', '7': '--...',
+        '8': '---..', '9': '----.', '/': '-..-.'
+    };
 
-            let vSig = 0.0;
-            if (isAbmtv && isTransmitting) {
-                const vDist = Math.abs(x - wfVideoX);
-                if (vDist < 35.0) {
-                    vSig = (amp * 1.5) * Math.cos((vDist / 35.0) * (Math.PI / 2.0));
-                }
-            }
-
-            const totalIntensity = Math.min(1.0, noise + cBar + aSig + vSig);
-
-            const b = totalIntensity > 0.08 ? Math.min(255, totalIntensity * 180.0) : 0;
-            const g = Math.min(255, Math.max(0, (totalIntensity - 0.1) * 255.0 * 2.2));
-            const r = Math.min(255, Math.max(0, (totalIntensity - 0.35) * 255.0 * 2.8));
-
-            const idx = x * 4;
-            pixelBuffer[idx]     = b;
-            pixelBuffer[idx + 1] = g;
-            pixelBuffer[idx + 2] = r;
-            pixelBuffer[idx + 3] = 255;
-        }
+    function textToMorse(text) {
+        return text.toUpperCase().split('').map(c => morseMap[c] || '').join(' ');
     }
 
-    static toMorse(text) {
-        if (!text) return "";
-        text = text.toUpperCase();
-        const morseDict = {
-            'A': ".-",    'B': "-...",  'C': "-.-.",  'D': "-..",   'E': ".",
-            'F': "..-.",  'G': "--.",   'H': "....",  'I': "..",    'J': ".---",
-            'K': "-.-",   'L': ".-..",  'M': "--",    'N': "-.",    'O': "---",
-            'P': ".--.",  'Q': "--.-",  'R': ".-.",   'S': "...",   'T': "-",
-            'U': "..-",   'V': "...-",  'W': ".--",   'X': "-..-",  'Y': "-.--",
-            'Z': "--..",  '0': "-----", '1': ".----", '2': "..---", '3': "...--",
-            '4': "....-", '5': ".....", '6': "-....", '7': "--...", '8': "---..",
-            '9': "----.", 'គ្': "-..-.", ' ': " "
-        };
-
-        const result = [];
-        for (let i = 0; i < text.length; i++) {
-            const c = text[i];
-            if (morseDict[c]) result.push(morseDict[c]);
-        }
-        return result.join(" ");
-    }
-
-    static generateMorseAudio(callsign, unencodedMorse, sampleRate, carrierLevel, isWideBand) {
-        const morse = this.toMorse(callsign);
-        if (!morse) return null;
-
-        const dotDuration = 0.09; 
-        const toneState = [];
-
-        for (let i = 0; i < morse.length; i++) {
-            const symbol = morse[i];
+    // --- Audio Synthesis & FM Modulation Engine (Web Audio Buffers) ---
+    function generateToneAudio(morseString, unencoded, sampleRate, carrierLevel, wideband) {
+        let dotDuration = 0.09;
+        let sequence = [];
+        
+        for (let symbol of morseString) {
             if (symbol === '.') {
-                for (let j = 0; j < Math.floor(dotDuration * sampleRate); j++) toneState.push(true);
-                for (let j = 0; j < Math.floor(dotDuration * 0.8 * sampleRate); j++) toneState.push(false);
+                for (let i = 0; i < dotDuration * sampleRate; i++) sequence.push(true);
+                for (let i = 0; i < dotDuration * 0.8 * sampleRate; i++) sequence.push(false);
             } else if (symbol === '-') {
-                for (let j = 0; j < Math.floor(dotDuration * 3.0 * sampleRate); j++) toneState.push(true);
-                for (let j = 0; j < Math.floor(dotDuration * 0.8 * sampleRate); j++) toneState.push(false);
-            } else if (symbol === ' ') {
-                for (let j = 0; j < Math.floor(dotDuration * 3.5 * sampleRate); j++) toneState.push(false);
+                for (let i = 0; i < dotDuration * 3.0 * sampleRate; i++) sequence.push(true);
+                for (let i = 0; i < dotDuration * 0.8 * sampleRate; i++) sequence.push(false);
+            } else {
+                for (let i = 0; i < dotDuration * 3.5 * sampleRate; i++) sequence.push(false);
             }
         }
 
-        const totalSamples = toneState.length;
-        if (totalSamples === 0) return null;
-        const pcmSamples = [];
+        let buffer = getAudioContext().createBuffer(1, sequence.length, sampleRate);
+        let channel = buffer.getChannelData(0);
+        let phaseCarrier = 0, phaseTone = 0;
+        let bwFactor = wideband ? 1.0 : 0.35;
 
-        let phaseCarrier = 0.0;
-        let phaseTone = 0.0;
-        const bwFactor = isWideBand ? 1.0 : 0.35;
-
-        for (let i = 0; i < totalSamples; i++) {
-            const isKeyed = toneState[i];
-            let mixedOutput = 0.0;
-
-            if (unencodedMorse) {
-                if (isKeyed) {
-                    phaseTone += (2.0 * Math.PI * (isWideBand ? 800.0 : 500.0)) / sampleRate;
-                    mixedOutput = Math.Sin ? Math.sin(phaseTone) * 0.95 : Math.sin(phaseTone) * 0.95;
+        for (let i = 0; i < sequence.length; i++) {
+            let keyed = sequence[i];
+            let mixed = 0;
+            if (unencoded) {
+                if (keyed) {
+                    phaseTone += (2 * Math.PI * (wideband ? 800 : 500)) / sampleRate;
+                    mixed = Math.sin(phaseTone) * 0.95;
                 }
             } else {
-                const carrierFreq = isKeyed ? (1200.0 * bwFactor) : (600.0 * bwFactor);
-                const modIndex = (isKeyed ? 14.0 : 0.0) * bwFactor;
-                
-                phaseTone += (2.0 * Math.PI * (isKeyed ? 180.0 : 0.0)) / sampleRate;
-                const modulationSignal = modIndex * Math.sin(phaseTone);
-
-                phaseCarrier += (2.0 * Math.PI * carrierFreq) / sampleRate;
-                const fmSignal = Math.sin(phaseCarrier + modulationSignal);
-
-                mixedOutput = fmSignal * (isKeyed ? 0.95 : (carrierLevel > 0.0 ? carrierLevel : 0.05));
+                let carrierFreq = keyed ? (1200 * bwFactor) : (600 * bwFactor);
+                let modIndex = (keyed ? 14 : 0) * bwFactor;
+                phaseTone += (2 * Math.PI * (keyed ? 180 : 0)) / sampleRate;
+                let modSignal = modIndex * Math.sin(phaseTone);
+                phaseCarrier += (2 * Math.PI * carrierFreq) / sampleRate;
+                let fm = Math.sin(phaseCarrier + modSignal);
+                mixed = fm * (keyed ? 0.95 : (carrierLevel > 0 ? carrierLevel : 0.05));
             }
-
-            pcmSamples.push(Math.round(18000.0 * mixedOutput));
+            channel[i] = mixed * 0.6;
         }
-
-        return this.wrapPcmAsWav(pcmSamples, sampleRate);
+        return buffer;
     }
 
-    static applyFMToWav(inputWav, carrierToneFreq, carrierToneLevel, isWideBand) {
-        if (!inputWav || inputWav.length <= 44) return null;
+    function processWavBuffer(inputBuffer, carrierLevel, wideband) {
+        let sampleRate = inputBuffer.sampleRate;
+        let inputData = inputBuffer.getChannelData(0);
+        let outBuffer = audioCtx.createBuffer(1, inputData.length, sampleRate);
+        let outData = outBuffer.getChannelData(0);
 
-        const dataView = new DataView(inputWav.buffer);
-        const sampleRate = dataView.getInt32(24, true);
-        const effectiveSampleRate = sampleRate <= 0 ? 22050 : sampleRate;
+        let phaseCarrier = 0, phaseMod = 0, phasePilot = 0, phaseScrambler = 0;
+        let devMult = wideband ? 1.0 : 0.25;
 
-        const sampleCount = Math.floor((inputWav.length - 44) / 2);
-        const pcmSamples = [];
+        for (let i = 0; i < inputData.length; i++) {
+            let normVoice = inputData[i];
+            phaseScrambler += (2 * Math.PI * 1850) / sampleRate;
+            let scrambled = -normVoice * Math.Cos ? Math.Cos(phaseScrambler) : Math.cos(phaseScrambler);
+            let voiceAbs = Math.abs(scrambled);
 
-        let phaseCarrier = 0.0;
-        let phaseModulator = 0.0;
-        let phasePilotTone = 0.0;
-        let phaseScrambler = 0.0;
-        const devMult = isWideBand ? 1.0 : 0.25;
+            let modFreq = (120 + (350 * voiceAbs)) * devMult;
+            let carrierFreq = (900 + (4500 * voiceAbs)) * devMult;
+            let modIndex = (22 + (35 * voiceAbs)) * devMult;
 
-        for (let i = 0; i < sampleCount; i++) {
-            const rawSample = dataView.getInt16(44 + (i * 2), true);
-            const normVoice = rawSample / 32768.0;
+            phaseMod += (2 * Math.PI * modFreq) / sampleRate;
+            let modSignal = modIndex * Math.sin(phaseMod);
 
-            // Voice Encryption / Scrambling Layer
-            phaseScrambler += (2.0 * Math.PI * 1850.0) / effectiveSampleRate;
-            const scrambledVoice = -normVoice * Math.Cos ? Math.cos(phaseScrambler) * 1.8 : Math.cos(phaseScrambler) * 1.8;
-            const voiceAbs = Math.abs(scrambledVoice);
+            phaseCarrier += (2 * Math.PI * carrierFreq) / sampleRate;
+            let fm = Math.sin(phaseCarrier + modSignal);
 
-            // High-deviation FM parameters
-            const modulatorFreq = (120.0 + (350.0 * voiceAbs)) * devMult;
-            const carrierFreq   = (900.0 + (4500.0 * voiceAbs)) * devMult;
-            const modIndex      = (22.0 + (35.0 * voiceAbs)) * devMult;
+            let outputVoice = fm * (0.65 + (0.35 * voiceAbs));
+            phasePilot += (2 * Math.PI * 1000) / sampleRate;
+            let pilot = Math.sin(phasePilot) * carrierLevel;
 
-            phaseModulator += (2.0 * Math.PI * modulatorFreq) / effectiveSampleRate;
-            const modulationSignal = modIndex * Math.sin(phaseModulator);
+            outData[i] = (outputVoice + pilot) * 0.5;
+        }
+        return outBuffer;
+    }
 
-            phaseCarrier += (2.0 * Math.PI * carrierFreq) / effectiveSampleRate;
-            const fmSignal = Math.sin(phaseCarrier + modulationSignal);
+    function playAudioBuffer(buffer) {
+        getAudioContext();
+        if (activeSourceNode) {
+            try { activeSourceNode.stop(); } catch(e){}
+        }
+        activeSourceNode = audioCtx.createBufferSource();
+        activeSourceNode.buffer = buffer;
+        activeSourceNode.connect(audioCtx.destination);
+        activeSourceNode.start();
+        
+        processedAudioBuffer = buffer;
+        btnSave.disabled = false;
+        
+        activeSourceNode.onended = () => {
+            txtTxState.textContent = "RX";
+            boxTxState.style.background = "#330000";
+        };
+    }
 
-            const outputGain = 0.65 + (0.35 * voiceAbs);
-            const outputVoice = fmSignal * outputGain;
+    // --- UI Interactions & Event Handlers ---
+    btnToggleDisplay.addEventListener("click", () => {
+        isScopeMode = !isScopeMode;
+        if (isScopeMode) {
+            lblScopeMode.textContent = "SPECTRUM SCOPE";
+            btnToggleDisplay.textContent = "🔄 SWITCH TO WATERFALL";
+        } else {
+            lblScopeMode.textContent = "WATERFALL DISPLAY";
+            btnToggleDisplay.textContent = "🔄 SWITCH TO SPECTRUM";
+        }
+    });
 
-            phasePilotTone += (2.0 * Math.PI * carrierToneFreq) / effectiveSampleRate;
-            const pilotSignal = Math.Sin ? Math.sin(phasePilotTone) * carrierToneLevel : Math.sin(phasePilotTone) * carrierToneLevel;
+    btnIdent.addEventListener("click", () => {
+        let call = txtCallsign.value.trim();
+        if (call.length < 6 || call.length > 7) {
+            txtStatus.textContent = "ERROR: Callsign must be 6 or 7 characters (e.g. W1AW/1)";
+            txtStatus.style.color = "#FF3333";
+            return;
+        }
+        txtTxState.textContent = "IDENT";
+        boxTxState.style.background = "#FF4500";
 
-            pcmSamples.push(Math.round(13000.0 * (outputVoice + pilotSignal)));
+        let morse = textToMorse(call);
+        let unencoded = chkUnencoded.checked;
+        let wideband = comboBandwidth.selectedIndex === 0;
+        let buf = generateToneAudio(morse, unencoded, 22050, sliderCarrier.value, wideband);
+        
+        playAudioBuffer(buf);
+        txtStatus.textContent = "STATUS: CW IDENT Transmitted Successfully.";
+        txtStatus.style.color = "#00FFCC";
+    });
+
+    // PTT Live Microphone Recording & Modulation Pipeline
+    btnPtt.addEventListener("click", async () => {
+        let ctx = getAudioContext();
+        if (!isRecording) {
+            try {
+                let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                recordedChunks = [];
+
+                mediaRecorder.ondataavailable = e => recordedChunks.push(e.data);
+                mediaRecorder.onstop = async () => {
+                    let blob = new Blob(recordedChunks, { type: 'audio/webm' });
+                    let arrayBuffer = await blob.arrayBuffer();
+                    let decoded = await ctx.decodeAudioData(arrayBuffer);
+                    
+                    let wideband = comboBandwidth.selectedIndex === 0;
+                    let modulated = processWavBuffer(decoded, sliderCarrier.value, wideband);
+                    playAudioBuffer(modulated);
+                    
+                    txtStatus.textContent = "STATUS: Secure Microphone Transmission Completed.";
+                    txtStatus.style.color = "#00FFCC";
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                btnPtt.textContent = "🔴 RECORDING";
+                btnPtt.style.background = "#880000";
+                btnIdent.disabled = true;
+                txtTxState.textContent = "REC";
+                boxTxState.style.background = "#FF0000";
+                txtStatus.textContent = "STATUS: Transmitting live microphone input...";
+            } catch (err) {
+                txtStatus.textContent = "ERROR: Microphone permission denied or unavailable.";
+                txtStatus.style.color = "#FF3333";
+            }
+        } else {
+            isRecording = false;
+            mediaRecorder.stop();
+            mediaRecorder.stream.getTracks().forEach(t => t.stop());
+            btnPtt.textContent = "🎙️ PTT MIC";
+            btnPtt.style.background = "#880000";
+            btnIdent.disabled = false;
+        }
+    });
+
+    btnLoad.addEventListener("click", () => fileInput.click());
+    fileInput.addEventListener("change", async (e) => {
+        let file = e.target.files[0];
+        if (!file) return;
+
+        txtTxState.textContent = "ENC";
+        boxTxState.style.background = "#800080";
+        txtStatus.textContent = "STATUS: Encrypting and processing WAV through secure FM pipeline...";
+        txtStatus.style.color = "#FF00FF";
+
+        let arrayBuffer = await file.arrayBuffer();
+        let decoded = await getAudioContext().decodeAudioData(arrayBuffer);
+        let wideband = comboBandwidth.selectedIndex === 0;
+        let modulated = processWavBuffer(decoded, sliderCarrier.value, wideband);
+
+        playAudioBuffer(modulated);
+        txtStatus.textContent = "STATUS: Secure Scrambled FM Modulation Complete & Playing.";
+        txtStatus.style.color = "#00FFCC";
+    });
+
+    btnLoadVideo.addEventListener("click", () => videoInput.click());
+    videoInput.addEventListener("change", () => {
+        comboMode.value = "ABMTV";
+        updateBandList();
+        txtStatus.textContent = "STATUS: Video/Image Loaded into ABMTV Subcarrier Pipeline.";
+        txtStatus.style.color = "#FF00FF";
+    });
+
+    btnSave.addEventListener("click", () => {
+        if (!processedAudioBuffer) return;
+        // Simple WAV conversion for export
+        let wavBytes = bufferToWav(processedAudioBuffer);
+        let blob = new Blob([wavBytes], { type: 'audio/wav' });
+        let url = URL.createObjectURL(blob);
+        let a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = "ArNet_Encrypted_Modulated.wav";
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        txtStatus.textContent = "STATUS: Saved encrypted file successfully.";
+        txtStatus.style.color = "#00FFCC";
+    });
+
+    // Helper to export AudioBuffer to WAV format bytes
+    function bufferToWav(buffer) {
+        let numOfChan = buffer.numberOfChannels,
+            sampleRate = buffer.sampleRate,
+            format = 1, // PCM
+            bitDepth = 16;
+
+        let result = buffer.getChannelData(0);
+        let bufferLength = result.length;
+        let dataLength = bufferLength * 2;
+        let abuffer = new ArrayBuffer(44 + dataLength);
+        let view = new DataView(abuffer);
+
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i));
         }
 
-        return this.wrapPcmAsWav(pcmSamples, effectiveSampleRate);
+        writeString(view, 0, 'RIFF');
+        view.setUint32(4, 36 + dataLength, true);
+        writeString(view, 8, 'WAVE');
+        writeString(view, 12, 'fmt ');
+        view.setUint32(16, 16, true);
+        view.setUint16(20, format, true);
+        view.setUint16(22, numOfChan, true);
+        view.setUint32(24, sampleRate, true);
+        view.setUint32(28, sampleRate * 2, true);
+        view.setUint16(32, 2, true);
+        view.setUint16(34, bitDepth, true);
+        writeString(view, 36, 'data');
+        view.setUint32(40, dataLength, true);
+
+        let offset = 44;
+        for (let i = 0; i < bufferLength; i++, offset += 2) {
+            let s = Math.max(-1, Math.min(1, result[i]));
+            view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+        }
+        return abuffer;
     }
-}
+
+    // --- Real-time Meter & Screen Display Animation Loop ---
+    const wfCanvas = document.createElement('canvas');
+    wfCanvas.width = 160;
+    wfCanvas.height = 80;
+    const wfCtx = wfCanvas.getContext('2d');
+    let wfImageData = wfCtx.createImageData(160, 80);
+
+    function animationTick() {
+        // Meter Needle Dynamics
+        let targetAmp = isRecording ? 0.85 : (activeSourceNode ? 0.6 : 0.02);
+        currentAmplitude += (targetAmp - currentAmplitude) * 0.2;
+
+        meterCtx.clearRect(0, 0, 200, 90);
+        meterCtx.strokeStyle = "#666";
+        meterCtx.lineWidth = 2;
+        meterCtx.beginPath();
+        meterCtx.arc(100, 80, 70, Math.PI * 1.15, Math.PI * 1.85);
+        meterCtx.stroke();
+
+        let angleDeg = 150.0 - (Math.min(1.0, currentAmplitude) * 120.0);
+        let angleRad = angleDeg * Math.PI / 180.0;
+        let nx = 100.0 + (65.0 * Math.cos(angleRad));
+        let ny = 85.0 - (65.0 * Math.sin(angleRad));
+
+        meterCtx.strokeStyle = "#55FF55";
+        meterCtx.lineWidth = 2;
+        meterCtx.beginPath();
+        meterCtx.moveTo(100, 85);
+        meterCtx.lineTo(nx, ny);
+        meterCtx.stroke();
+
+        // Scope / Waterfall Rendering
+        displayCtx.fillStyle = "#000000";
+        displayCtx.fillRect(0, 0, 640, 140);
+
+        if (isScopeMode) {
+            displayCtx.strokeStyle = "#005577";
+            displayCtx.lineWidth = 1;
+            displayCtx.setLineDash([2, 2]);
+            [160, 320, 480].forEach(x => {
+                displayCtx.beginPath(); displayCtx.moveTo(x, 0); displayCtx.lineTo(x, 140); displayCtx.stroke();
+            });
+            displayCtx.setLineDash([]);
+
+            displayCtx.strokeStyle = "#FFFF00";
+            displayCtx.lineWidth = 1.5;
+            displayCtx.fillStyle = "rgba(0, 255, 255, 0.1)";
+            displayCtx.beginPath();
+            displayCtx.moveTo(0, 140);
+            for (let x = 0; x < 640; x += 8) {
+                let noise = Math.random() * 2;
+                let peak = (currentAmplitude * 110) * Math.sin((x * 0.15) + (Date.now() * 0.005));
+                let y = 140 - (noise + Math.abs(peak));
+                displayCtx.lineTo(x, y);
+            }
+            displayCtx.lineTo(640, 140);
+            displayCtx.closePath();
+            displayCtx.stroke();
+            displayCtx.fill();
+        } else {
+            // Shift waterfall down by 1 row
+            let data = wfImageData.data;
+            for (let i = data.length - 1; i >= 640; i--) {
+                data[i] = data[i - 640];
+            }
+            // Generate top line pixels
+            for (let x = 0; x < 160; x++) {
+                let intensity = Math.min(1.0, Math.random() * 0.04 + (Math.abs(x - 40) < 3 ? 0.85 : 0) + (Math.abs(x - 80) < 25 ? currentAmplitude : 0));
+                let idx = x * 4;
+                data[idx] = intensity > 0.08 ? Math.min(255, intensity * 180) : 0;
+                data[idx+1] = Math.min(255, Math.max(0, (intensity - 0.1) * 255 * 2.2));
+                data[idx+2] = Math.min(255, Math.max(0, (intensity - 0.35) * 255 * 2.8));
+                data[idx+3] = 255;
+            }
+            wfCtx.putImageData(wfImageData, 0, 0);
+            displayCtx.drawImage(wfCanvas, 0, 0, 640, 140);
+        }
+
+        requestAnimationFrame(animationTick);
+    }
+    requestAnimationFrame(animationTick);
 </script>
 
 </body>
